@@ -1,0 +1,53 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+
+@theme {
+    --color-*: initial;
+
+    --color-white: #fff;
+
+    --color-primary-50: oklch(96.58% 0.006 170.45);
+    --color-primary-100: oklch(93.09% 0.012 178.01);
+    --color-primary-200: oklch(85.94% 0.023 175.86);
+    --color-primary-300: oklch(78.85% 0.036 175.88);
+    --color-primary-400: oklch(71.51% 0.046 176.23);
+    --color-primary: oklch(64.26% 0.059 175.27);
+    --color-primary-600: oklch(54.63% 0.048 175.36);
+    --color-primary-700: oklch(44.76% 0.040 174.36);
+    --color-primary-800: oklch(34.09% 0.028 174.02);
+    --color-primary-900: oklch(22.76% 0.017 176.06);
+    --color-primary-950: oklch(18.77% 0.011 175.67);
+
+    --color-gray-50: oklch(98.5% 0.002 247.839);
+    --color-gray-100: oklch(96.7% 0.003 264.542);
+    --color-gray-200: oklch(92.8% 0.006 264.531);
+    --color-gray-300: oklch(87.2% 0.01 258.338);
+    --color-gray-400: oklch(70.7% 0.022 261.325);
+    --color-gray-500: oklch(55.1% 0.027 264.364);
+    --color-gray-600: oklch(44.6% 0.03 256.802);
+    --color-gray-700: oklch(37.3% 0.034 259.733);
+    --color-gray-800: oklch(27.8% 0.033 256.848);
+    --color-gray-900: oklch(21% 0.034 264.665);
+    --color-gray-950: oklch(13% 0.028 261.692);
+}
+
+/* base-ui */
+#root {
+    isolation: isolate;
+}
+
+body {
+    position: relative;
+}
+
+/* Remove arrows in Chrome, Safari, Edge */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Remove arrows in Firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
+}
