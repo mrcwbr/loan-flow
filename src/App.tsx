@@ -1,6 +1,6 @@
 import { Toggle, ToggleGroup } from '@base-ui/react';
 import clsx from 'clsx';
-import { ChartLine, Sheet } from 'lucide-react';
+import { ChartLine, Plus, Sheet, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
   Bar,
@@ -14,87 +14,79 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { LCard } from './components/LCard.tsx';
-import { LInput } from './components/LInput.tsx';
-import { currencyFormatter, formatCurrency } from './utils.ts';
-
-interface LoanData {
-  year: number;
-  zinsen: number;
-  tilgung: number;
-  restschuld: number;
-  jahresrate: number;
-}
+import { calculateLoan, type Financing } from './calculateLoan.ts';
+import { LfButton } from './components/LfButton.tsx';
+import { LfCard } from './components/LfCard.tsx';
+import { LfInput } from './components/LfInput.tsx';
+import {
+  currencyFormatter,
+  formatCurrency,
+  getNewColor,
+  getRandomDarlehensbetrag,
+  getRandomSollzins,
+  getRandomTilgung,
+  notNull,
+  padLeft,
+} from './utils.ts';
 
 // todo rename to english variables
 // todo add input to path to be shareable?
 // todo add i18n
 // todo add sitemap?
 export function App() {
-  const [darlehensbetrag, setDarlehensbetrag] = useState(250000);
-  const [sollzins, setSollzins] = useState(3.5);
-  const [tilgung, setTilgung] = useState(2);
-  const [laufzeit, setLaufzeit] = useState(10);
+  const [financings, setFinancings] = useState<Financing[]>([
+    {
+      id: 1,
+      color: '#65998B',
+      name: 'Bank 1',
+      darlehensbetrag: 250000,
+      sollzins: 3.5,
+      tilgung: 2,
+      laufzeit: 10,
+    },
+  ]);
 
   const [showLineChart, setShowLineChart] = useState(true);
 
-  const calculatedData = useMemo(() => {
-    if (darlehensbetrag <= 0 || sollzins < 0 || tilgung <= 0 || laufzeit <= 0) {
-      return null;
-    }
+  const calculatedData = financings
+    .map((financing) => calculateLoan(financing))
+    .filter(notNull);
 
-    // Monatliche Rate berechnen (Annuität)
-    const jahreszins = sollzins / 100;
-    const jahresrate = darlehensbetrag * (jahreszins + tilgung / 100);
-    const monatlicheRate = jahresrate / 12;
+  function addFinancing() {
+    setFinancings([
+      ...financings,
+      {
+        id: financings.length + 1,
+        color: getNewColor(financings.length + 1),
+        name: `Bank ${financings.length + 1}`,
+        darlehensbetrag: getRandomDarlehensbetrag(),
+        sollzins: getRandomSollzins(),
+        tilgung: getRandomTilgung(),
+        laufzeit: financings.at(-1)?.laufzeit ?? 10,
+      },
+    ]);
+  }
 
-    const data: LoanData[] = [];
-    let restschuld = darlehensbetrag;
+  function updateFinancing<T extends keyof Financing>(
+    id: number,
+    field: T,
+    value: Financing[T]
+  ) {
+    setFinancings((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, [field]: value } : f))
+    );
+  }
 
-    for (let year = 1; year <= laufzeit; year++) {
-      let jahresZinsen = 0;
-      let jahresTilgung = 0;
-
-      // 12 Monate berechnen
-      for (let month = 1; month <= 12; month++) {
-        if (restschuld <= 0) break;
-
-        const monatsZinsen = (restschuld * jahreszins) / 12;
-        const monatsTilgung = Math.min(
-          monatlicheRate - monatsZinsen,
-          restschuld
-        );
-
-        jahresZinsen += monatsZinsen;
-        jahresTilgung += monatsTilgung;
-        restschuld -= monatsTilgung;
-      }
-
-      data.push({
-        year,
-        zinsen: jahresZinsen,
-        tilgung: jahresTilgung,
-        restschuld: Math.max(0, restschuld),
-        jahresrate: jahresZinsen + jahresTilgung,
-      });
-
-      if (restschuld <= 0) break;
-    }
-
-    return {
-      monatlicheRate,
-      jahresrate,
-      data,
-      gesamtZinsen: data.reduce((sum, d) => sum + d.zinsen, 0),
-      gesamtTilgung: data.reduce((sum, d) => sum + d.tilgung, 0),
-      restschuld:
-        data.length > 0 ? data[data.length - 1].restschuld : darlehensbetrag,
-    };
-  }, [darlehensbetrag, sollzins, tilgung, laufzeit]);
+  function removeFinancing(id: number) {
+    if (financings.length <= 1) return;
+    const newFinancings = financings.filter((f) => f.id !== id);
+    setFinancings(newFinancings);
+  }
 
   const chartData = useMemo(() => {
     if (!calculatedData) return [];
-    return calculatedData.data.map((d) => ({
+    // todo remove at(0)!
+    return calculatedData.at(0)!.data.map((d) => ({
       name: `Jahr ${d.year}`,
       Zinsen: Math.round(d.zinsen),
       Tilgung: Math.round(d.tilgung),
@@ -118,251 +110,317 @@ export function App() {
           </p>
         </header>
 
-        {/* Eingabefelder */}
-        <LCard title="Darlehensdetails eingeben">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <LInput
-              label="Darlehensbetrag"
-              value={darlehensbetrag}
-              setValue={setDarlehensbetrag}
-              append="€"
-            />
-            <LInput
-              label="Sollzins (p.a.)"
-              value={sollzins}
-              setValue={setSollzins}
-              append="%"
-            />
+        <LfCard title="Darlehensdetails eingeben">
+          <div className="space-y-4">
+            {financings.map((financing) => (
+              <div
+                key={financing.id}
+                className="grid gap-4 md:grid-cols-2 lg:grid-cols-6"
+              >
+                <LfInput
+                  label="Name"
+                  value={financing.name}
+                  onChange={(value) =>
+                    updateFinancing(financing.id, 'name', value as string)
+                  }
+                />
+                <LfInput
+                  label="Darlehensbetrag"
+                  value={financing.darlehensbetrag}
+                  onChange={(value) =>
+                    updateFinancing(
+                      financing.id,
+                      'darlehensbetrag',
+                      value as number
+                    )
+                  }
+                  append="€"
+                  type="number"
+                />
+                <LfInput
+                  label="Sollzins (p.a.)"
+                  value={financing.sollzins}
+                  onChange={(value) =>
+                    updateFinancing(financing.id, 'sollzins', value as number)
+                  }
+                  append="%"
+                  type="number"
+                />
+                <LfInput
+                  label="Tilgung"
+                  value={financing.tilgung}
+                  onChange={(value) =>
+                    updateFinancing(financing.id, 'tilgung', value as number)
+                  }
+                  append="%"
+                  type="number"
+                />
+                <LfInput
+                  label="Laufzeit"
+                  value={financing.laufzeit}
+                  onChange={(value) =>
+                    updateFinancing(financing.id, 'laufzeit', value as number)
+                  }
+                  append="Jahre"
+                  step={1}
+                  type="number"
+                />
+                <div className="flex items-end gap-4">
+                  <LfInput
+                    label="Farbe"
+                    value={financing.color}
+                    onChange={(value) =>
+                      updateFinancing(financing.id, 'color', value as string)
+                    }
+                    type="color"
+                  />
+                  <div>
+                    <LfButton
+                      title="Delete"
+                      icon={Trash2}
+                      disabled={financings.length <= 1}
+                      onClick={() => removeFinancing(financing.id)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
 
-            <LInput
-              label="Tilgung"
-              value={tilgung}
-              setValue={setTilgung}
-              append="%"
-            />
-            <LInput
-              label="Laufzeit"
-              value={laufzeit}
-              setValue={setLaufzeit}
-              append="Jahre"
-              step={1}
+            <LfButton
+              icon={Plus}
+              title="Add Financing"
+              className="w-full"
+              onClick={addFinancing}
             />
           </div>
-        </LCard>
+        </LfCard>
 
-        {/* Ergebnisübersicht */}
-        {calculatedData && (
-          <>
-            <div className="grid gap-4 md:grid-cols-4">
-              <LCard title="Monatliche Rate" className="bg-primary text-white">
-                <div className="text-2xl font-bold">
-                  {formatCurrency(calculatedData.monatlicheRate)}
-                </div>
-              </LCard>
-
-              <LCard title="Zinsen gesamt">
-                <div className="text-2xl font-bold">
-                  {formatCurrency(calculatedData.gesamtZinsen)}
-                </div>
-              </LCard>
-
-              <LCard title="Tilgung gesamt">
-                <div className="text-2xl font-bold">
-                  {formatCurrency(calculatedData.gesamtTilgung)}
-                </div>
-              </LCard>
-
-              <LCard title="Restschuld">
-                <div className="text-2xl font-bold text-primary">
-                  {formatCurrency(calculatedData.restschuld)}
-                </div>
-              </LCard>
-            </div>
-
-            <LCard title="Zinsen und Tilgung pro Jahr">
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={chartData}
-                    margin={{ top: 16, right: 16, left: -16, bottom: 0 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="oklch(0.8 0 0)"
-                    />
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fill: 'oklch(0.2 0.05 270)', fontSize: 12 }}
-                      axisLine={{ stroke: 'oklch(0.2 0.05 270)' }}
-                    />
-                    <YAxis
-                      tick={{ fill: 'oklch(0.2 0.05 270)', fontSize: 12 }}
-                      axisLine={{ stroke: 'oklch(0.2 0.05 270)' }}
-                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-                    />
-                    <Tooltip
-                      formatter={currencyFormatter}
-                      labelStyle={{ color: 'oklch(0.2 0.05 270)' }}
-                      contentStyle={{
-                        backgroundColor: 'oklch(1 0 0)',
-                        border: '2px solid oklch(0.2 0.05 270)',
-                        borderRadius: '6px',
-                      }}
-                    />
-                    <Legend />
-                    <Bar
-                      dataKey="Zinsen"
-                      stackId="a"
-                      fill={primaryColor800}
-                      name="Zinsen"
-                      radius={[0, 0, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="Tilgung"
-                      stackId="a"
-                      fill={primaryColor}
-                      name="Tilgung"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </LCard>
-
-            <LCard
-              title="Tilgungsplan"
-              actions={
-                <ToggleGroup
-                  value={[showLineChart ? 'line' : 'table']}
-                  onValueChange={(value) =>
-                    setShowLineChart(value.includes('line'))
-                  }
-                  className="flex gap-px rounded-md border border-gray-200 bg-gray-100 p-0.5"
-                >
-                  <Toggle
-                    aria-label="Line Chart"
-                    value="line"
-                    className="flex size-8 items-center justify-center rounded-xs text-gray-600 select-none hover:bg-gray-100 focus-visible:bg-none focus-visible:outline-2 focus-visible:-outline-offset-1 active:bg-gray-200 data-pressed:bg-white data-pressed:text-primary"
-                  >
-                    <ChartLine />
-                  </Toggle>
-                  {/*todo text primary and own component*/}
-                  <Toggle
-                    aria-label="Table"
-                    value="table"
-                    className="flex size-8 items-center justify-center rounded-xs text-gray-600 select-none hover:bg-gray-100 focus-visible:bg-none focus-visible:outline-2 focus-visible:-outline-offset-1 active:bg-gray-200 data-pressed:bg-white data-pressed:text-primary"
-                  >
-                    <Sheet />
-                  </Toggle>
-                </ToggleGroup>
-              }
-            >
-              {showLineChart ? (
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={calculatedData.data}
-                      margin={{ top: 16, right: 16, left: -16, bottom: 0 }}
+        <LfCard title="Ergebnis" padding={false}>
+          <div className="min-w-full">
+            <table className="relative min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th className="p-4 text-left text-sm font-semibold">Name</th>
+                  <th className="p-4 text-right text-sm font-semibold">
+                    Monatliche Rate
+                  </th>
+                  <th className="p-4 text-right text-sm font-semibold">
+                    Zinsen gesamt
+                  </th>
+                  <th className="p-4 text-right text-sm font-semibold">
+                    Tilgung gesamt
+                  </th>
+                  <th className="p-4 text-right text-sm font-semibold">
+                    Restschuld
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white dark:divide-white/10 dark:bg-gray-900">
+                {calculatedData.map((data) => (
+                  <tr key={data.id}>
+                    <td className="px-4 py-2 text-sm whitespace-nowrap">
+                      <span
+                        className="rounded-md px-2 py-1 text-xs font-medium text-white"
+                        style={{ backgroundColor: data.color }}
+                      >
+                        {data.name}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm whitespace-nowrap">
+                      {formatCurrency(data.monatlicheRate)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm whitespace-nowrap">
+                      {formatCurrency(data.gesamtZinsen)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm whitespace-nowrap">
+                      {formatCurrency(data.gesamtTilgung)}
+                    </td>
+                    <td
+                      className="px-4 py-2 text-right text-sm font-semibold whitespace-nowrap"
+                      style={{ color: data.color }}
                     >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="oklch(0.8 0 0)"
-                      />
-                      <XAxis
-                        dataKey="year"
-                        label="Jahre"
-                        tick={{ fill: gray950, fontSize: 12 }}
-                        axisLine={{ stroke: gray950 }}
-                      />
-                      <YAxis
-                        tick={{ fill: gray950, fontSize: 12 }}
-                        axisLine={{ stroke: gray950 }}
-                        tickFormatter={(value) =>
-                          `${(value / 1000).toFixed(0)}k`
-                        }
-                      />
-                      <Tooltip
-                        formatter={currencyFormatter}
-                        labelStyle={{ color: gray950 }}
-                        contentStyle={{
-                          backgroundColor: 'oklch(1 0 0)',
-                          border: '2px solid oklch(0.2 0.05 270)',
-                          borderRadius: '6px',
-                        }}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="restschuld"
-                        stroke={primaryColor}
-                        strokeWidth={3}
-                        dot={{
-                          fill: primaryColor,
-                          strokeWidth: 2,
-                          r: 4,
-                        }}
-                        activeDot={{ r: 6 }}
-                        name="Restschuld"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr>
-                        <th className="text-left font-semibold tracking-wide uppercase">
-                          Jahr
-                        </th>
-                        <th className="text-right font-semibold tracking-wide uppercase">
-                          Jahresrate
-                        </th>
-                        <th className="text-right font-semibold tracking-wide uppercase">
-                          Zinsen
-                        </th>
-                        <th className="text-right font-semibold tracking-wide uppercase">
-                          Tilgung
-                        </th>
-                        <th className="text-right font-semibold tracking-wide uppercase">
-                          Restschuld
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {calculatedData.data.map((row, index) => (
-                        <tr
-                          key={row.year}
-                          className={clsx({ 'bg-gray-50': index % 2 === 0 })}
-                        >
-                          <td className="font-mono">{padLeft(row.year)}</td>
-                          {/*todo geist mono*/}
-                          <td className="text-right font-mono">
-                            {formatCurrency(row.jahresrate)}
-                          </td>
-                          <td className="text-right font-mono text-primary">
-                            {formatCurrency(row.zinsen)}
-                          </td>
-                          <td className="text-right font-mono">
-                            {formatCurrency(row.tilgung)}
-                          </td>
-                          <td className="text-right font-mono">
-                            {formatCurrency(row.restschuld)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </LCard>
-          </>
-        )}
+                      {formatCurrency(data.restschuld)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </LfCard>
+
+        <LfCard title="Zinsen und Tilgung pro Jahr">
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 16, right: 16, left: -16, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.8 0 0)" />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: 'oklch(0.2 0.05 270)', fontSize: 12 }}
+                  axisLine={{ stroke: 'oklch(0.2 0.05 270)' }}
+                />
+                <YAxis
+                  tick={{ fill: 'oklch(0.2 0.05 270)', fontSize: 12 }}
+                  axisLine={{ stroke: 'oklch(0.2 0.05 270)' }}
+                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  formatter={currencyFormatter}
+                  labelStyle={{ color: 'oklch(0.2 0.05 270)' }}
+                  contentStyle={{
+                    backgroundColor: 'oklch(1 0 0)',
+                    border: '2px solid oklch(0.2 0.05 270)',
+                    borderRadius: '6px',
+                  }}
+                />
+                <Legend />
+                <Bar
+                  dataKey="Zinsen"
+                  stackId="a"
+                  fill={primaryColor800}
+                  name="Zinsen"
+                  radius={[0, 0, 0, 0]}
+                />
+                <Bar
+                  dataKey="Tilgung"
+                  stackId="a"
+                  fill={primaryColor}
+                  name="Tilgung"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </LfCard>
+
+        <LfCard
+          title="Tilgungsplan"
+          actions={
+            <ToggleGroup
+              value={[showLineChart ? 'line' : 'table']}
+              onValueChange={(value) =>
+                setShowLineChart(value.includes('line'))
+              }
+              className="flex gap-px rounded-md border border-gray-200 bg-gray-100 p-0.5"
+            >
+              <Toggle
+                aria-label="Line Chart"
+                value="line"
+                className="flex size-8 items-center justify-center rounded-xs text-gray-600 select-none hover:bg-gray-100 focus-visible:bg-none focus-visible:outline-2 focus-visible:-outline-offset-1 active:bg-gray-200 data-pressed:bg-white data-pressed:text-primary"
+              >
+                <ChartLine />
+              </Toggle>
+              {/*todo text primary and own component*/}
+              <Toggle
+                aria-label="Table"
+                value="table"
+                className="flex size-8 items-center justify-center rounded-xs text-gray-600 select-none hover:bg-gray-100 focus-visible:bg-none focus-visible:outline-2 focus-visible:-outline-offset-1 active:bg-gray-200 data-pressed:bg-white data-pressed:text-primary"
+              >
+                <Sheet />
+              </Toggle>
+            </ToggleGroup>
+          }
+        >
+          {showLineChart ? (
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={calculatedData.data}
+                  margin={{ top: 16, right: 16, left: -16, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="oklch(0.8 0 0)"
+                  />
+                  <XAxis
+                    dataKey="year"
+                    label="Jahre"
+                    tick={{ fill: gray950, fontSize: 12 }}
+                    axisLine={{ stroke: gray950 }}
+                  />
+                  <YAxis
+                    tick={{ fill: gray950, fontSize: 12 }}
+                    axisLine={{ stroke: gray950 }}
+                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    formatter={currencyFormatter}
+                    labelStyle={{ color: gray950 }}
+                    contentStyle={{
+                      backgroundColor: 'oklch(1 0 0)',
+                      border: '2px solid oklch(0.2 0.05 270)',
+                      borderRadius: '6px',
+                    }}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="restschuld"
+                    stroke={primaryColor}
+                    strokeWidth={3}
+                    dot={{
+                      fill: primaryColor,
+                      strokeWidth: 2,
+                      r: 4,
+                    }}
+                    activeDot={{ r: 6 }}
+                    name="Restschuld"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="text-left font-semibold tracking-wide uppercase">
+                      Jahr
+                    </th>
+                    <th className="text-right font-semibold tracking-wide uppercase">
+                      Jahresrate
+                    </th>
+                    <th className="text-right font-semibold tracking-wide uppercase">
+                      Zinsen
+                    </th>
+                    <th className="text-right font-semibold tracking-wide uppercase">
+                      Tilgung
+                    </th>
+                    <th className="text-right font-semibold tracking-wide uppercase">
+                      Restschuld
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {calculatedData.data.map((row, index) => (
+                    <tr
+                      key={row.year}
+                      className={clsx({ 'bg-gray-50': index % 2 === 0 })}
+                    >
+                      <td className="font-mono">{padLeft(row.year)}</td>
+                      {/*todo geist mono*/}
+                      <td className="text-right font-mono">
+                        {formatCurrency(row.jahresrate)}
+                      </td>
+                      <td className="text-right font-mono text-primary">
+                        {formatCurrency(row.zinsen)}
+                      </td>
+                      <td className="text-right font-mono">
+                        {formatCurrency(row.tilgung)}
+                      </td>
+                      <td className="text-right font-mono">
+                        {formatCurrency(row.restschuld)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </LfCard>
       </div>
     </div>
   );
-}
-
-function padLeft(num: number) {
-  return num < 10 ? `0${num}` : num;
 }

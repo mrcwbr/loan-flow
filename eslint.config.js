@@ -34,4 +34,9 @@ export default defineConfig([
       'better-tailwindcss/enforce-consistent-line-wrapping': 'off',
     },
   },
+  {
+    rules: {
+      'prefer-template': 'warn',
+    },
+  },
 ]);
