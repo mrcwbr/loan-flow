@@ -15,10 +15,6 @@ export function currencyFormatter(value: ValueType | undefined) {
   return value;
 }
 
-export function padLeft(num: number) {
-  return num < 10 ? `0${num}` : num;
-}
-
 export function notNull<T>(value: T | null): value is T {
   return value !== null;
 }
@@ -57,12 +53,27 @@ export function getRandomTilgung(): number {
   return getRandomValue(TILGUNG_VALUES);
 }
 
-export function getNewColor(index: number): string {
-  const color = COLORS.at(index);
+export function getNewColor(usedColors: string[]): string {
+  const color = COLORS.find((color) => !usedColors.includes(color));
   if (color) {
     return color;
   }
 
   const random = Math.floor(Math.random() * 0xffffff);
   return `#${random.toString(16).padStart(6, '0')}`;
+}
+
+export function darkenColor(hex: string, amount: number = 0.25): string {
+  const cleanHex = hex.replace('#', '');
+  const num = parseInt(cleanHex, 16);
+
+  let r = (num >> 16) & 0xff;
+  let g = (num >> 8) & 0xff;
+  let b = num & 0xff;
+
+  r = Math.max(0, Math.floor(r * (1 - amount)));
+  g = Math.max(0, Math.floor(g * (1 - amount)));
+  b = Math.max(0, Math.floor(b * (1 - amount)));
+
+  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
 }

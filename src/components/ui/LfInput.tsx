@@ -22,6 +22,7 @@ export function LfInput({
   min?: number;
   type?: 'color' | 'number' | 'text';
 }) {
+  // todo use tousand separator and input style type
   return (
     <Field.Root className="flex w-full flex-col items-start gap-1">
       <Field.Label className="text-sm font-medium text-gray-900">

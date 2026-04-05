@@ -1,78 +1,85 @@
 export type LoanData = {
   year: number;
-  zinsen: number; // total
-  tilgung: number;
-  restschuld: number;
-  jahresrate: number;
+  interest: number;
+  repayment: number;
+  remainingBalance: number;
+  annualPayment: number;
 };
 
 export type Financing = {
   id: number;
   name: string;
   color: string;
-  darlehensbetrag: number;
-  sollzins: number;
-  tilgung: number;
-  laufzeit: number;
+  loanAmount: number;
+  interestRate: number;
+  repaymentRate: number;
+  termYears: number;
 };
 
 export function calculateLoan({
   id,
-  darlehensbetrag,
-  sollzins,
-  tilgung,
-  laufzeit,
+  loanAmount,
+  interestRate,
+  repaymentRate,
+  termYears,
   color,
   name,
 }: Financing) {
-  if (darlehensbetrag <= 0 || sollzins < 0 || tilgung <= 0 || laufzeit <= 0) {
+  if (
+    loanAmount <= 0 ||
+    interestRate < 0 ||
+    repaymentRate <= 0 ||
+    termYears <= 0
+  ) {
     return null;
   }
 
-  // Monatliche Rate berechnen (Annuität)
-  const jahreszins = sollzins / 100;
-  const jahresrate = darlehensbetrag * (jahreszins + tilgung / 100);
-  const monatlicheRate = jahresrate / 12;
+  const annualInterestRate = interestRate / 100;
+  const annualPayment = loanAmount * (annualInterestRate + repaymentRate / 100);
+  const monthlyPayment = annualPayment / 12;
 
   const data: LoanData[] = [];
-  let restschuld = darlehensbetrag;
+  let remainingBalance = loanAmount;
 
-  for (let year = 1; year <= laufzeit; year++) {
-    let jahresZinsen = 0;
-    let jahresTilgung = 0;
+  for (let year = 1; year <= termYears; year++) {
+    let totalInterest = 0;
+    let totalRepayment = 0;
 
     for (let month = 1; month <= 12; month++) {
-      if (restschuld <= 0) break;
+      if (remainingBalance <= 0) break;
 
-      const monatsZinsen = (restschuld * jahreszins) / 12;
-      const monatsTilgung = Math.min(monatlicheRate - monatsZinsen, restschuld);
+      const monthlyInterest = (remainingBalance * annualInterestRate) / 12;
+      const monthlyPrincipal = Math.min(
+        monthlyPayment - monthlyInterest,
+        remainingBalance
+      );
 
-      jahresZinsen += monatsZinsen;
-      jahresTilgung += monatsTilgung;
-      restschuld -= monatsTilgung;
+      totalInterest += monthlyInterest;
+      totalRepayment += monthlyPrincipal;
+      remainingBalance -= monthlyPrincipal;
     }
 
     data.push({
       year,
-      zinsen: jahresZinsen,
-      tilgung: jahresTilgung,
-      restschuld: Math.max(0, restschuld),
-      jahresrate: jahresZinsen + jahresTilgung,
+      interest: totalInterest,
+      repayment: totalRepayment,
+      remainingBalance: Math.max(0, remainingBalance),
+      annualPayment: totalInterest + totalRepayment,
     });
 
-    if (restschuld <= 0) break;
+    if (remainingBalance <= 0) break;
   }
 
   return {
     id,
     color,
-    monatlicheRate,
-    jahresrate,
+    monthlyPayment,
+    annualPayment,
     data,
     name,
-    gesamtZinsen: data.reduce((sum, d) => sum + d.zinsen, 0),
-    gesamtTilgung: data.reduce((sum, d) => sum + d.tilgung, 0),
-    restschuld:
-      data.length > 0 ? data[data.length - 1].restschuld : darlehensbetrag,
+    totalInterest: data.reduce((sum, d) => sum + d.interest, 0),
+    totalRepayment: data.reduce((sum, d) => sum + d.repayment, 0),
+    remainingBalance:
+      data.length > 0 ? data[data.length - 1].remainingBalance : loanAmount,
   };
 }
