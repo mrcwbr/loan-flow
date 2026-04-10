@@ -1,7 +1,9 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { calculateLoan, type Financing } from './calculateLoan.ts';
 import { AmortizationSchedule } from './components/AmortizationSchedule.tsx';
+import { LanguageSwitch } from './components/LanguageSwitch.tsx';
 import { ResultTableRow } from './components/ResultTableRow.tsx';
 import { LfButton } from './components/ui/LfButton.tsx';
 import { LfCard } from './components/ui/LfCard.tsx';
@@ -65,16 +67,19 @@ export function App() {
     setFinancings(newFinancings);
   }
 
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="mx-auto max-w-6xl space-y-8">
-        <header className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Darlehensrechner
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Berechnen Sie Ihre monatliche Rate und sehen Sie den Tilgungsplan
-          </p>
+        <header className="flex justify-between gap-2">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {t('header.title')}
+            </h1>
+            <p className="text-gray-600">{t('header.subtitle')}</p>
+          </div>
+          <LanguageSwitch />
         </header>
 
         <LfCard title="Darlehensdetails eingeben">
@@ -85,23 +90,24 @@ export function App() {
                 className="grid gap-4 md:grid-cols-2 lg:grid-cols-6"
               >
                 <LfInput
-                  label="Name"
+                  label={t('form.name')}
                   value={financing.name}
                   onChange={(value) =>
                     updateFinancing(financing.id, 'name', value as string)
                   }
                 />
                 <LfInput
-                  label="Darlehensbetrag"
+                  label={t('form.loanAmount')}
                   value={financing.loanAmount}
                   onChange={(value) =>
                     updateFinancing(financing.id, 'loanAmount', value as number)
                   }
                   append="€"
                   type="number"
+                  help={t('form.helpTexts.loanAmount')}
                 />
                 <LfInput
-                  label="Sollzins (p.a.)"
+                  label={t('form.interestRate')}
                   value={financing.interestRate}
                   onChange={(value) =>
                     updateFinancing(
@@ -112,9 +118,10 @@ export function App() {
                   }
                   append="%"
                   type="number"
+                  help={t('form.helpTexts.interestRate')}
                 />
                 <LfInput
-                  label="Tilgung"
+                  label={t('form.repaymentRate')}
                   value={financing.repaymentRate}
                   onChange={(value) =>
                     updateFinancing(
@@ -125,9 +132,10 @@ export function App() {
                   }
                   append="%"
                   type="number"
+                  help={t('form.helpTexts.repaymentRate')}
                 />
                 <LfInput
-                  label="Laufzeit"
+                  label={t('form.termYears')}
                   value={financing.termYears}
                   onChange={(value) =>
                     updateFinancing(financing.id, 'termYears', value as number)
@@ -138,7 +146,7 @@ export function App() {
                 />
                 <div className="flex items-end gap-4">
                   <LfInput
-                    label="Farbe"
+                    label={t('form.color')}
                     value={financing.color}
                     onChange={(value) =>
                       updateFinancing(financing.id, 'color', value as string)
@@ -147,7 +155,8 @@ export function App() {
                   />
                   <div>
                     <LfButton
-                      title="Delete"
+                      title={t('form.delete')}
+                      hideTitle
                       icon={Trash2}
                       disabled={financings.length <= 1}
                       onClick={() => removeFinancing(financing.id)}

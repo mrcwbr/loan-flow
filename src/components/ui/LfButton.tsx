@@ -8,10 +8,12 @@ export function LfButton({
   onClick,
   disabled,
   icon: Icon,
+  hideTitle,
 }: {
   icon?: LucideIcon;
   title: string;
   className?: string;
+  hideTitle?: boolean;
   disabled?: boolean;
   onClick: () => void;
 }) {
@@ -26,7 +28,7 @@ export function LfButton({
       )}
     >
       {Icon && <Icon className="size-5" />}
-      {title}
+      {!hideTitle || !Icon ? title : null}
     </Button>
   );
 }

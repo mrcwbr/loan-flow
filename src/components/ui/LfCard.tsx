@@ -17,7 +17,7 @@ export function LfCard({
   return (
     <div
       className={clsx(
-        'divide-y divide-gray-200 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xs',
+        'divide-y divide-gray-200 overflow-hidden rounded-lg border border-gray-200 bg-white',
         className
       )}
     >
