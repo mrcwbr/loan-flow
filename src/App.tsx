@@ -16,8 +16,7 @@ import {
   notNull,
 } from './utils.ts';
 
-// todo add input to path to be shareable?
-// todo add i18n
+// todo add input values to url to be shareable?
 // todo add sitemap?
 export function App() {
   const [financings, setFinancings] = useState<Financing[]>([
