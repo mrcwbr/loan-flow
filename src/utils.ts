@@ -41,15 +41,15 @@ function getRandomValue<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export function getRandomDarlehensbetrag(): number {
+export function getRandomLoanAmount(): number {
   return getRandomValue(DARLEHENSBETRAG_VALUES);
 }
 
-export function getRandomSollzins(): number {
+export function getRandomInterestRate(): number {
   return getRandomValue(SOLLZINS_VALUES);
 }
 
-export function getRandomTilgung(): number {
+export function getRandomRepayment(): number {
   return getRandomValue(TILGUNG_VALUES);
 }
 

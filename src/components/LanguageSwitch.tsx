@@ -1,8 +1,9 @@
 import { Select } from '@base-ui/react/select';
+import clsx from 'clsx';
 import { CheckIcon, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-export function LanguageSwitch() {
+export function LanguageSwitch({ className }: { className?: string }) {
   const { t, i18n } = useTranslation();
 
   const items = [
@@ -11,10 +12,10 @@ export function LanguageSwitch() {
   ];
 
   return (
-    <div className="flex flex-col">
+    <div className={clsx('flex flex-col', className)}>
       <Select.Root
         items={items}
-        value={i18n.language}
+        value={i18n.resolvedLanguage ?? i18n.language.split('-').at(0)}
         onValueChange={(value) => i18n.changeLanguage(value ?? undefined)}
       >
         <Select.Label className="cursor-default text-sm/5 font-medium text-gray-900">

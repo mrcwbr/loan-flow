@@ -15,6 +15,7 @@ export function LfInput({
   min,
   type,
   help,
+  thousandSeparator,
 }: {
   value: number | string;
   onChange: (value: number | string) => void;
@@ -26,9 +27,21 @@ export function LfInput({
   min?: number;
   type?: 'color' | 'number' | 'text';
   help?: string;
+  thousandSeparator?: boolean;
 }) {
-  const { t } = useTranslation();
-  // todo use tousand separator and input style type
+  const { t, i18n } = useTranslation();
+
+  function onValueChange(value: string) {
+    if (thousandSeparator) {
+      const normalizedValue = value.replaceAll('.', '').replaceAll(',', '');
+
+      onChange(normalizedValue === '' ? 0 : parseInt(normalizedValue));
+      return;
+    }
+
+    onChange(type === 'number' ? Number(value) : value);
+  }
+
   return (
     <Field.Root className="flex w-full flex-col items-start gap-1">
       <Popover.Root>
@@ -64,13 +77,13 @@ export function LfInput({
       <div className="relative">
         <Field.Control
           required
-          value={value}
-          type={type}
+          value={
+            thousandSeparator ? value.toLocaleString(i18n.language) : value
+          }
+          type={thousandSeparator ? 'text' : type}
           step={step}
           min={min}
-          onValueChange={(value) =>
-            onChange(type === 'number' ? Number(value) : value)
-          }
+          onValueChange={onValueChange}
           placeholder={placeholder}
           className={clsx(
             'h-10 w-full min-w-11 rounded-md border border-gray-200 text-base text-gray-900 focus:outline-2 focus:-outline-offset-1 focus:outline-gray-950',

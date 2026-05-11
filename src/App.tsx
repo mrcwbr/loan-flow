@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import FavIcon from '../public/favicon.svg';
 import { calculateLoan, type Financing } from './calculateLoan.ts';
 import { AmortizationSchedule } from './components/AmortizationSchedule.tsx';
 import { LanguageSwitch } from './components/LanguageSwitch.tsx';
@@ -10,9 +11,9 @@ import { LfCard } from './components/ui/LfCard.tsx';
 import { LfInput } from './components/ui/LfInput.tsx';
 import {
   getNewColor,
-  getRandomDarlehensbetrag,
-  getRandomSollzins,
-  getRandomTilgung,
+  getRandomInterestRate,
+  getRandomLoanAmount,
+  getRandomRepayment,
   notNull,
 } from './utils.ts';
 
@@ -42,9 +43,9 @@ export function App() {
         id: financings.length + 1,
         color: getNewColor(financings.map((f) => f.color)),
         name: `Bank ${financings.length + 1}`,
-        loanAmount: getRandomDarlehensbetrag(),
-        interestRate: getRandomSollzins(),
-        repaymentRate: getRandomTilgung(),
+        loanAmount: getRandomLoanAmount(),
+        interestRate: getRandomInterestRate(),
+        repaymentRate: getRandomRepayment(),
         termYears: financings.at(-1)?.termYears ?? 10,
       },
     ]);
@@ -71,14 +72,20 @@ export function App() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="mx-auto max-w-6xl space-y-8">
-        <header className="flex justify-between gap-2">
+        <header className="flex items-center gap-4">
+          <img
+            src={FavIcon}
+            alt={t('header.title')}
+            title={t('header.title')}
+            className="size-16"
+          />
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
               {t('header.title')}
             </h1>
-            <p className="text-gray-600">{t('header.subtitle')}</p>
+            <div className="text-gray-600">{t('header.subtitle')}</div>
           </div>
-          <LanguageSwitch />
+          <LanguageSwitch className="ml-auto" />
         </header>
 
         <LfCard title="Darlehensdetails eingeben">
@@ -104,6 +111,8 @@ export function App() {
                   append="€"
                   type="number"
                   help={t('form.helpTexts.loanAmount')}
+                  thousandSeparator
+                  step={1}
                 />
                 <LfInput
                   label={t('form.interestRate')}
